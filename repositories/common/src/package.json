@@ -1,0 +1,4 @@
+{
+  "---": "we add this name for absolute import into expo/react native.",
+  "name": "@common"
+}

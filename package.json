@@ -1,0 +1,33 @@
+{
+  "main": "dealgpt",
+  "version": "0.0.0",
+  "scripts": {
+    "dev:setup": "NODE_PATH=./src npx ts-node-dev ./src/devOps/developmentEnvironment/setup/index.ts",
+    "prettify": "npx prettier --write '**/*.ts'"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "pretty-quick --staged --pattern **/*.ts"
+    }
+  },
+  "dependencies": {
+    "@types/lodash": "^4.14.150",
+    "deep-diff": "^1.0.2",
+    "lodash": "^4.17.15",
+    "streamie": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/deep-diff": "^1.0.2",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^12.7.5",
+    "indigobird": "0.0.2",
+    "prettier": "^1.19.1",
+    "pretty-quick": "^2.0.1",
+    "ts-node": "^8.3.0",
+    "ts-node-dev": "^1.0.0-pre.44",
+    "tslint": "5.20.1",
+    "tslint-config-prettier": "1.18.0",
+    "tslint-plugin-prettier": "2.0.1",
+    "typescript": "^5.3.3"
+  }
+}
