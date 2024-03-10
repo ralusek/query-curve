@@ -1,0 +1,26 @@
+{
+  "name": "@query-curve/query-extensions-google-sheets",
+  "version": "0.0.1",
+  "description": "@query-curve utility for querying for a value along a cubic bezier curve.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "keywords": [],
+  "author": "Tomas Savigliano <ralusek@gmail.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^18.16.3",
+    "esbuild": "^0.18.20",
+    "esbuild-plugin-d-ts-path-alias": "^4.2.0",
+    "esbuild-plugin-d.ts": "^1.2.3",
+    "typescript": "^5.3.3"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@query-curve/query": "^0.1.1"
+  }
+}

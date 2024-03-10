@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["es2015", "dom"],
+    "module": "commonjs",
+    "declaration": true,
+    "outDir": "./dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      // Allows absolute import pats beginning with @
+      "@/*": ["*"],
+      "@src/*": ["src/*"],
+      // "@common/*": ["src/@common/*"],
+      // "@backendCommon/*": ["src/@backendCommon/*"],
+    },
+  },
+  
+  "include": ["src", "globals.d.ts"],
+  "exclude": ["node_modules"],
+}

@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "module": "ESNext",
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": false,
+    "jsx": "react-jsx",
+    "declaration": true,
+    "declarationMap": true,
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      // Allows absolute import pats beginning with @
+      "@/*": ["*"],
+      "@src/*": ["src/*"],
+      // "@common/*": ["src/@common/*"],
+      // "@backendCommon/*": ["src/@backendCommon/*"],
+    },
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
