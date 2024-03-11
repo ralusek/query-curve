@@ -9,7 +9,5 @@ import queryCurve, { queryEncodedCurve } from '@query-curve/query';
  * @customfunction
  */
 globalThis.QUERYCURVE = (value: number | string, curve: string): number | null => {
-  // Assuming your compiled queryCurve function is available in the global scope
-  // and it is synchronous or you have adapted it to work synchronously in this context.
   return queryEncodedCurve(curve, typeof value === 'string' ? parseFloat(value) : value);
 }
