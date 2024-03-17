@@ -5,20 +5,20 @@ import decode from '@common/utils/encoding/scaledBezierChain/decode';
 
 /**
  * This function finds the y value for a given x value along a cubic Bezier curve.
- * @param curve The cubic Bezier curve, outputted from @query-curve/builder. First element is the x scale factor and the second is the y scale factor, rest are the points and handles.
- * @param x The x value for which we will find the associated y value along the curve.
+ * @param curve The cubic Bezier curve, outputted from @query-curve/builder. First 4 elements are (scaleFactorX, scaleFactorY, offsetX, offsetY), rest are the points and handles.
+ * @param scaledX The x value for which we will find the associated y value along the curve. This should reflect the value in the scaled & offset coordinate space.
  * @returns The y value for the given x value along the curve.
  */
 export default function queryCurve(
   curve: ScaledBezierChain,
   scaledX: number,
 ) {
-  // Because the first 2 items are the scale factors, we need to skip them
-  const first = 2;
+  // Because the first 4 items are the scale and offset factors, we need to skip them
+  const first = 4;
   const last = curve.length - 1;
 
   if (!(curve[0] && curve[1])) throw new Error('Scale factors cannot be 0');
-  const x = scaledX / curve[0];
+  const x = (scaledX / curve[0]) - curve[2]; // Bring back to internal coordinate space by dividing by x scale factor (0 index) and subtracting x offset (2 index)
 
   if (x < curve[first] || x > curve[last - 1]) return null;
   
@@ -31,7 +31,7 @@ export default function queryCurve(
   // the loop being used to find the segmentStartIndex, and simply don't break
   // out when the segment is found to allow the loop to continue to check for exact matches.
   for (let i = first; i < curve.length; i += 6) {
-    if (curve[i] === x) return scale(curve[i + 1]);
+    if (curve[i] === x) return toExternalCoordinate(curve[i + 1]);
   }
 
   
@@ -57,13 +57,13 @@ export default function queryCurve(
     const point = getPointOnCurveAtT(segment, t);
 
     const y = Math.abs(point[1]) < 1e-15 ? 0 : point[1]; // If the y value is very close to 0, return 0
-    return scale(y);
+    return toExternalCoordinate(y);
   }
 
   throw new Error('Failed to find y for x on curve');
 
-  function scale(value: number) {
-    const scaled = value * curve[1];
+  function toExternalCoordinate(value: number) {
+    const scaled = (value + curve[3]) * curve[1]; // Add y offset (3 index) and multiply by y scale factor (1 index)
     return Object.is(scaled, -0) ? 0 : scaled;
   }
 }

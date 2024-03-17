@@ -1,6 +1,6 @@
 {
   "name": "@query-curve/builder",
-  "version": "0.2.6",
+  "version": "1.0.0",
   "description": "@query-curve utility for building a cubic bezier curve graph meant to be queried for values along the curve.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

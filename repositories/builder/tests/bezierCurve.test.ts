@@ -1,7 +1,7 @@
 import bezierCurve, { curveToEncodedChain, encodedChainToCurve } from '../dist';
 import { BezierPoint, Vector2 } from '../dist/@common/types';
 
-describe('@query-curve/queryCurve', () => {
+describe('@query-curve/builder', () => {
   const shared = bezierCurve({
     points: [
       { point: [0, 0.5], handle: [[-0.05, 0.5], [0.05, 0.5]] },

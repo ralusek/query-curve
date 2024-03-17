@@ -19,6 +19,14 @@ export function areEqualVectors<T extends Vector>(a: T, b: T): boolean {
   return a.every((v, i) => v === b[i]);
 }
 
+export function getOffsetAndScaleFromRange(from: number, to: number) {
+  const scale = to - from;
+  return {
+    scale,
+    offset: from / scale,
+  };
+}
+
 const exp = 1e7;
 function truncate(number: number) {
   return Math.round(number * exp) / exp;
