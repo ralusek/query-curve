@@ -27,7 +27,7 @@ function truncate(number: number) {
 export function curveToScaledChain(
   curve: BezierCurve,
 ): ScaledBezierChain {
-  return [...curve.scale, ...curveToChain(curve)];
+  return [...curve.scale, ...curve.offset, ...curveToChain(curve)];
 }
 
 export function curveToEncodedChain(curve: BezierCurve): EncodedScaledBezierChain {
@@ -55,7 +55,7 @@ export function curveToChain(curve: BezierCurve): BezierChain {
 
 export function scaledChainToCurve(chain: BezierChain): BezierCurve {
   if (validateScaledBezierChainLength(chain)) throw new Error('Invalid chain length');
-  const first = 2; // First 2 values are x and y scale factors
+  const first = 4; // First 2 values are x and y scale factors. Next 2 are x and y offsets.
   const last = chain.length - 1;
 
   const points: BezierPoint[] = [];
@@ -86,7 +86,7 @@ export function scaledChainToCurve(chain: BezierChain): BezierCurve {
     handle: [[chain[last - 3], chain[last - 2]], [2, chain[last]]],
   });
 
-  return { points, scale: [chain[0], chain[1]] };
+  return { points, scale: [chain[0], chain[1]], offset: [chain[2], chain[3]] };
 }
 
 export function encodedChainToCurve(encodedChain: EncodedScaledBezierChain): BezierCurve {
@@ -99,16 +99,18 @@ export type EditableBezierCurve = {
       point: BezierPoint['point'];
       handle?: BezierPoint['handle'];
     },
-    scaled?: boolean,
+    options?: { isScaled?: boolean; isOffset?: boolean; },
   ) => number | null;
   removePoint: (index: number) => void;
-  setHandlePosition: (index: number, handleIndex: 0 | 1, position: Vector2, scaled?: boolean) => void;
-  setPointPosition: (index: number, position: Vector2, scaled?: boolean) => void;
+  setHandlePosition: (index: number, handleIndex: 0 | 1, position: Vector2, options?: { isScaled?: boolean; isOffset?: boolean; }) => void;
+  setPointPosition: (index: number, position: Vector2, options?: { isScaled?: boolean; isOffset?: boolean; }) => void;
   getScaledPoint: (index: number) => BezierPoint;
   getScaledPoints: () => BezierPoint[];
   points: BezierPoint[];
   scale: Vector2;
+  offset: Vector2;
   setScale: (scale: Vector2, options?: { transformPoints?: boolean }) => void;
+  setOffset: (offset: Vector2, options?: { transformPoints?: boolean }) => void;
   curve: BezierCurve;
   clone: () => EditableBezierCurve;
   fromScaledChain: (chain: ScaledBezierChain) => EditableBezierCurve;
@@ -119,31 +121,39 @@ export default function bezierCurve(
   curve: BezierCurve = {
     points: [],
     scale: [1, 1],
+    offset: [0, 0],
   },
   config: {
     onPointAdd?: (curve: BezierCurve, index: number) => void;
     onPointRemove?: (curve: BezierCurve, index: number) => void;
     onPointChange?: (curve: BezierCurve, index: number, isNew?: boolean) => void;
+    inputs?: { isScaled?: boolean; isOffset?: boolean; };
   } = {},
 ): EditableBezierCurve {
   if (curve.scale[0] === 0 || curve.scale[1] === 0) throw new Error('Scale cannot be 0');
 
   curve = JSON.parse(JSON.stringify(curve));
-  curve.points.forEach((point) => addPoint(point, false));
+  curve.points.forEach((point) => addPoint(point, { isScaled: config.inputs?.isScaled, isOffset: config.inputs?.isOffset }));
 
   function addPoint(
     point: {
       point: BezierPoint['point'];
       handle?: BezierPoint['handle'];
     },
-    scaled?: boolean,
+    { isScaled = true, isOffset = true }: { isScaled?: boolean; isOffset?: boolean; } = {},
   ) {
     const index = (() => {
       if (!curve.points.length) return 0;
-      if (scaled) point = {
+      if (isScaled) point = {
         ...point,
         point: [point.point[0] / curve.scale[0], point.point[1] / curve.scale[1]],
       };
+      if (isOffset) point = {
+        ...point,
+        // These have already been scaled if necessary, so we can just subtract the offset
+        point: [point.point[0] - curve.offset[0], point.point[1] - curve.offset[1]],
+      };
+
       let wasEqual = false;
   
       // Find index to insert point by finding the first point with x greater than the new point
@@ -256,16 +266,27 @@ export default function bezierCurve(
     ].map((i) => i === null ? false : enforceBounds(i));
   }
 
-  function setHandlePosition(index: number, handleIndex: 0 | 1, position: Vector2, scaled?: boolean) {
-    if (scaled) position = [position[0] / curve.scale[0], position[1] / curve.scale[1]];
+  function setHandlePosition(
+    index: number,
+    handleIndex: 0 | 1,
+    position: Vector2,
+    { isScaled = true, isOffset = true }: { isScaled?: boolean; isOffset?: boolean; } = {}
+  ) {
+    if (isScaled) position = [position[0] / curve.scale[0], position[1] / curve.scale[1]];
+    if (isOffset) position = [position[0] - curve.offset[0], position[1] - curve.offset[1]];
     curve.points[index].handle[handleIndex] = position;
     const changed = enforceBounds(index);
     // If boundary change didn't already call onPointChange, call it here
     if (!changed) config.onPointChange?.(curve, index);
   }
 
-  function setPointPosition(index: number, position: Vector2, scaled?: boolean) {
-    position = scaled ? [position[0] / curve.scale[0], position[1] / curve.scale[1]] : position.slice() as Vector2;
+  function setPointPosition(
+    index: number,
+    position: Vector2,
+    { isScaled = true, isOffset = true }: { isScaled?: boolean; isOffset?: boolean; } = {}
+  ) {
+    position = isScaled ? [position[0] / curve.scale[0], position[1] / curve.scale[1]] : position.slice() as Vector2;
+    position = isOffset ? [position[0] - curve.offset[0], position[1] - curve.offset[1]] : position.slice() as Vector2;
     const originalPosition = curve.points[index].point.slice() as Vector2;
     curve.points[index].point = position;
 
@@ -296,13 +317,38 @@ export default function bezierCurve(
     }
   }
 
+  function setOffset(offset: Vector2, { transformPoints = false } = {}) {
+    const previous = curve.offset;
+    curve.offset = offset.slice() as Vector2;
+
+    if (transformPoints) {
+      const offset = subtractVector(curve.offset, previous);
+      curve.points.forEach((point) => {
+        point.point = addVector(point.point, offset);
+        point.handle = [
+          addVector(point.handle[0], offset),
+          addVector(point.handle[1], offset),
+        ];
+      });
+    }
+  }
+
   function getScaledPoint(index: number): BezierPoint {
     const point = curve.points[index];
     return {
-      point: [point.point[0] * curve.scale[0], point.point[1] * curve.scale[1]],
+      point: [
+        (point.point[0] + curve.offset[0]) * curve.scale[0],
+        (point.point[1] + curve.offset[1]) * curve.scale[1],
+      ],
       handle: [
-        [point.handle[0][0] * curve.scale[0], point.handle[0][1] * curve.scale[1]],
-        [point.handle[1][0] * curve.scale[0], point.handle[1][1] * curve.scale[1]],
+        [
+          (point.handle[0][0] + curve.offset[0]) * curve.scale[0],
+          (point.handle[0][1] + curve.offset[1]) * curve.scale[1],
+        ],
+        [
+          (point.handle[1][0] + curve.offset[0]) * curve.scale[0],
+          (point.handle[1][1] + curve.offset[1]) * curve.scale[1],
+        ],
       ],
     };
   }
@@ -313,9 +359,10 @@ export default function bezierCurve(
     curve.points = [];
 
     previousPoints.forEach((point, i) => config.onPointRemove?.(curve, i));
-    newCurve.points.forEach((point) => addPoint(point, false));
+    newCurve.points.forEach((point) => addPoint(point, { isScaled: false, isOffset: false }));
 
     setScale(newCurve.scale);
+    setOffset(newCurve.offset);
 
     return instance;
   }
@@ -339,15 +386,20 @@ export default function bezierCurve(
     get scale() {
       return curve.scale.slice() as Vector2;
     },
+    get offset() {
+      return curve.offset.slice() as Vector2;
+    },
     setScale,
+    setOffset,
     get curve() {
       return {
         ...curve,
         scale: curve.scale.slice(),
+        offset: curve.offset.slice(),
       } as BezierCurve;
     },
 
-    clone: (): EditableBezierCurve => bezierCurve(curve, config),
+    clone: (): EditableBezierCurve => bezierCurve(curve, { ...config, inputs: { isScaled: false, isOffset: false } }),
     fromScaledChain,
     fromEncodedChain,
   };

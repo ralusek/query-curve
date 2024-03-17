@@ -4,6 +4,10 @@
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ralusek/query-curve/tree/main/repositories/ui/react"
+  },
   "files": [
     "dist"
   ],

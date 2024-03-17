@@ -7,6 +7,7 @@ export type BezierPoint = {
 
 export type BezierCurve = {
   scale: Vector2; // x and y scale factors
+  offset: Vector2; // x and y offset
   points: BezierPoint[];
 };
 
@@ -29,10 +30,15 @@ export type BezierSegment = [
 // in order to avoid redundancy
 export type BezierChain = number[];
 
-// BezierChain with first element being the x scale factor and the second being the y scale factor
+// BezierChain with the following additional properties:
+// First element is the x scale factor
+// Second element is the y scale factor
+// Third element is the x offset
+// Fourth element is the y offset
+// Remaining elements are the BezierChain
 export type ScaledBezierChain = number[];
 
-// ScaledBezierChain, where each value has been raised to 10^6, rounded to the nearest integer, and encoded in base62
+// ScaledBezierChain, where each value has been raised to 10^7, rounded to the nearest integer, and encoded in base62
 export type EncodedScaledBezierChain = string;
 
 export type Vector = number[];

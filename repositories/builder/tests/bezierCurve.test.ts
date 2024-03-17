@@ -8,6 +8,7 @@ describe('@query-curve/queryCurve', () => {
       { point: [1, 0.5], handle: [[0.95, 0.5], [1.05, 0.5]] },
     ],
     scale: [1, 1],
+    offset: [0, 0],
   });
 
   const template = shared.clone();
@@ -19,6 +20,7 @@ describe('@query-curve/queryCurve', () => {
         { point: [1, 0.5], handle: [[0.95, 0.5], [1.05, 0.5]] },
       ],
       scale: [1, 1],
+      offset: [0, 0],
     });
 
     expect(curve.points[0].point).toEqual([0, 0.5]);
@@ -97,54 +99,109 @@ describe('@query-curve/queryCurve', () => {
   });
 
   it('should create a curve from an encoded chain', () => {
-    const encoded = '21sMy-fxSK-0-0-0-fxSK-fxSK-0-fxSK-fxSK';
+    // scale of 3, 1
+    const encoded = '21sMy-fxSK-0-0-0-0-0-fxSK-fxSK-0-fxSK-fxSK';
     const curve = encodedChainToCurve(encoded);
-    const editable = bezierCurve(curve);
+    const editable = bezierCurve(curve, { inputs: { isScaled: false, isOffset: false } });
+
+    expect(editable.scale).toEqual([3, 1]);
+    expect(editable.offset).toEqual([0, 0]);
 
     expect(editable.points[0].point).toEqual([0, 0]);
     expect(editable.points[0].handle[1]).toEqual([0, 1]);
     expect(editable.points[1].point).toEqual([1, 1]);
     expect(editable.points[1].handle[0]).toEqual([1, 0]);
-    expect(editable.scale).toEqual([3, 1]);
+    
+
+    const scaledPoints = editable.getScaledPoints();
+    expect(scaledPoints[0].point).toEqual([0, 0]);
+    expect(scaledPoints[0].handle[1]).toEqual([0, 1]);
+    expect(scaledPoints[1].point).toEqual([3, 1]);
+    expect(scaledPoints[1].handle[0]).toEqual([3, 0]);
+
+    const reencoded = curveToEncodedChain(curve);
+    expect(reencoded).toBe(encoded);
   });
 
   it('should update a curve from an encoded chain', () => {
-    const encoded = '21sMy-fxSK-0-0-0-fxSK-fxSK-0-fxSK-fxSK';
+    const encoded = '21sMy-fxSK-0-0-0-0-0-fxSK-fxSK-0-fxSK-fxSK';
     const cloned = template.clone();
+    expect(cloned.scale).toEqual(template.scale);
+    expect(cloned.offset).toEqual(template.offset);
 
     expect(cloned.scale).toEqual([1, 1]);
     expect(cloned.points[0].point).toEqual([0, 0.5]);
     expect(cloned.points[1].point).toEqual([1, 0.5]);
 
     cloned.fromEncodedChain(encoded);
+
+    expect(cloned.scale).toEqual([3, 1]);
+    expect(cloned.offset).toEqual([0, 0]);
+
     expect(cloned.points[0].point).toEqual([0, 0]);
     expect(cloned.points[0].handle[1]).toEqual([0, 1]);
     expect(cloned.points[1].point).toEqual([1, 1]);
     expect(cloned.points[1].handle[0]).toEqual([1, 0]);
-    expect(cloned.scale).toEqual([3, 1]);
+
+    const scaledPoints = cloned.getScaledPoints();
+    expect(scaledPoints[0].point).toEqual([0, 0]);
+    expect(scaledPoints[0].handle[1]).toEqual([0, 1]);
+    expect(scaledPoints[1].point).toEqual([3, 1]);
+    expect(scaledPoints[1].handle[0]).toEqual([3, 0]);
+
+    const reencoded = curveToEncodedChain(cloned.curve);
+    expect(reencoded).toBe(encoded);
+  });
+
+  it('should create a curve from an encoded chain with an offset', () => {
+    // scale of 3, 1, offset of -1, 1 (remember, offset is not scaled)
+    const encoded = '21sMy-fxSK--fxSK-fxSK-0-0-0-fxSK-fxSK-0-fxSK-fxSK';
+    const curve = encodedChainToCurve(encoded);
+    const editable = bezierCurve(curve, { inputs: { isScaled: false, isOffset: false } });
+
+    expect(curve.scale).toEqual([3, 1]);
+    expect(curve.offset).toEqual([-1, 1]);
+
+    expect(editable.points[0].point).toEqual([0, 0]);
+    expect(editable.points[0].handle[1]).toEqual([0, 1]);
+    expect(editable.points[1].point).toEqual([1, 1]);
+    expect(editable.points[1].handle[0]).toEqual([1, 0]);
+
+    const scaledPoints = editable.getScaledPoints();
+    expect(scaledPoints[0].point).toEqual([-3, 1]); // offset point is -1, 1, scaled by 3, 1
+    expect(scaledPoints[0].handle[1]).toEqual([-3, 2]); // offset handle is -1, 2, scaled by 3, 1
+    expect(scaledPoints[1].point).toEqual([0, 2]); // offset point is 0, 2, scaled by 3, 1
+    expect(scaledPoints[1].handle[0]).toEqual([0, 1]); // offset handle is 0, 1, scaled by 3, 1
+
+    const reencoded = curveToEncodedChain(curve);
+    expect(reencoded).toBe(encoded);
   });
 
   it('should be able to encode negative values', () => {
-    const encoded = '-fxSK--fxSK-0-0-fxSK-fxSK-0-0-fxSK-fxSK';
-    const curve = bezierCurve({
-      points: [
-        {
-          point: [0, 0],
-          handle: [
-            [0, 0],
-            [1, 1],
-          ],
-        },
-        {
-          point: [1, 1],
-          handle: [
-            [0, 0],
-            [1, 1],
-          ],
-        },
-      ],
-      scale: [-1, -1],
-    });
+    const encoded = '-fxSK--fxSK-0-0-0-0-fxSK-fxSK-0-0-fxSK-fxSK';
+    const curve = bezierCurve(
+      {
+        points: [
+          {
+            point: [0, 0],
+            handle: [
+              [0, 0],
+              [1, 1],
+            ],
+          },
+          {
+            point: [1, 1],
+            handle: [
+              [0, 0],
+              [1, 1],
+            ],
+          },
+        ],
+        scale: [-1, -1],
+        offset: [0, 0],
+      },
+      { inputs: { isScaled: false, isOffset: false } },
+    );
 
     const result = curveToEncodedChain(curve);
 
