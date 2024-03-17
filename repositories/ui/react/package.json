@@ -16,15 +16,11 @@
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
-    "@query-curve/builder": "^0.2.6",
-    "@query-curve/query": "^0.1.1",
+    "p5": "^1.9.0",
     "react": "^17.0.0 || ^18.0.0",
-    "react-dom": "^17.0.0 || ^18.0.0",
-    "p5": "^1.9.0"
+    "react-dom": "^17.0.0 || ^18.0.0"
   },
   "devDependencies": {
-    "@query-curve/builder": "^0.2.6",
-    "@query-curve/query": "^0.1.1",
     "@types/p5": "^1.7.6",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
@@ -34,5 +30,9 @@
     "p5": "^1.9.1",
     "react": "^18.2.0",
     "typescript": "^5.4.2"
+  },
+  "dependencies": {
+    "@query-curve/builder": "^1.1.2",
+    "@query-curve/query": "^1.0.0"
   }
 }

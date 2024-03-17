@@ -16,7 +16,7 @@ export default function useGetContainerDimensions(
   const { ref: height, setValue: setHeight } = useRefState<number | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef?.current) return;
 
     const resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];

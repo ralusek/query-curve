@@ -93,10 +93,16 @@ describe('@query-curve/builder', () => {
     expect(cloned.points[1].point).toEqual([10, 10]); // Check last point moved correctly
 
     // Testing an actual regression encountered
-    cloned.setPointPosition(0, [-101.86666666666666, 0.5333333333333456]);
-    expect(cloned.points[0].point).toEqual([-101.86666666666666, 0.5333333333333456]);
-    cloned.setPointPosition(0, [-100, 0.5333333333333456]);
-    expect(cloned.points[0].point).toEqual([-100, 0.5333333333333456]);
+    const chain = '2BLnMW-2BLnMW--KyjA--KyjA-0-KyjA-CaR6-CaR6-TN1E-CaR6-fxSK-KyjA';
+    const curve = encodedChainToCurve(chain);
+    const editable = bezierCurve(curve, { inputs: { isScaled: false, isOffset: false } });
+    expect(editable.scale).toEqual([200, 200]);
+    expect(editable.offset).toEqual([-0.5, -0.5]);
+    expect(editable.getScaledPoint(0).point).toEqual([-100, 0]);
+    expect(editable.getScaledPoint(1).point).toEqual([100, 0]);
+
+    editable.setPointPosition(0, [-100, 1]);
+    expect(editable.getScaledPoint(0).point[0]).toEqual(-100);
   });
 
   it('should update the scale without transforming the points', () => {

@@ -56,7 +56,7 @@ export default function useP5<C extends any>(
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!containerRef.current) return;
+    if (!containerRef?.current) return;
 
     let instance: p5;
 

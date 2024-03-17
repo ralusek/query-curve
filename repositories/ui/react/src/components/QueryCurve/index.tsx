@@ -259,10 +259,7 @@ export default function QueryCurve({
     showHandles,
     encodedChain,
     setEncodedChain,
-    xAxisScale,
-    yAxisScale,
-    setXAxisScale,
-    setYAxisScale,
+    range,
     gridLinesH,
     gridLinesV,
     setGridLinesH,
@@ -304,12 +301,20 @@ export default function QueryCurve({
 
   const graphInputs = <div className={`GraphInputs`} style={style.graphInputs}>
     <div className={`GraphInputContainer`} style={style.graphInputContainer}>
-      <label>X Axis Scale</label>
-      <InputDecimal className={`GraphInput`} style={style.graphInput} value={xAxisScale} onValue={(value) => value && setXAxisScale(value)} />
+      <label>X Axis From</label>
+      <InputDecimal className={`GraphInput`} style={style.graphInput} value={range.x[0]} onValue={(value) => value && range.setX(value, range.x[1])} />
     </div>
     <div className={`GraphInputContainer`} style={style.graphInputContainer}>
-      <label>Y Axis Scale</label>
-      <InputDecimal className={`GraphInput`} style={style.graphInput} value={yAxisScale} onValue={(value) => value && setYAxisScale(value)} />
+      <label>X Axis To</label>
+      <InputDecimal className={`GraphInput`} style={style.graphInput} value={range.x[1]} onValue={(value) => value && range.setX(range.x[0], value)} />
+    </div>
+    <div className={`GraphInputContainer`} style={style.graphInputContainer}>
+      <label>Y Axis From</label>
+      <InputDecimal className={`GraphInput`} style={style.graphInput} value={range.y[0]} onValue={(value) => value && range.setY(value, range.y[1])} />
+    </div>
+    <div className={`GraphInputContainer`} style={style.graphInputContainer}>
+      <label>Y Axis To</label>
+      <InputDecimal className={`GraphInput`} style={style.graphInput} value={range.y[1]} onValue={(value) => value && range.setY(range.y[0], value)} />
     </div>
     <div className={`GraphInputContainer`} style={style.graphInputContainer}>
       <label>Y Grid</label>

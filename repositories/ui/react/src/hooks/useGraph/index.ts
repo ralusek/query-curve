@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import p5 from 'p5';
 import queryCurve from '@query-curve/query';
-import bezierCurve, { EditableBezierCurve, curveToEncodedChain, curveToScaledChain, encodedChainToCurve } from '@query-curve/builder';
+import bezierCurve, { EditableBezierCurve, curveToEncodedChain, curveToScaledChain, encodedChainToCurve, getOffsetAndScaleFromRange, getRangeFromOffsetAndScale } from '@query-curve/builder';
 
 // Types
 import { BezierCurve, BezierPoint, EncodedScaledBezierChain, Vector2 } from '@query-curve/builder/dist/@common/types';
@@ -10,27 +10,18 @@ import { BezierCurve, BezierPoint, EncodedScaledBezierChain, Vector2 } from '@qu
 import useRefState, { useMemoRefState } from '@src/hooks/useRefState';
 import useP5 from '@src/hooks/useP5';
 
+// Utils
+import remap from '@/src/utils/remap';
+import clamp from '@/src/utils/clamp';
+import signedClamp from '@/src/utils/signedClamp';
+
 // Constants
 const CLICK_RADIUS = 10;
 
-const DEFAULT_CURVE = 'fxSK-fxSK-0-KyjA-CaR6-CaR6-8OI4-TN1E-KyjA-TN1E-XZAG-TN1E-TN1E-CaR6-fxSK-KyjA';
+const DEFAULT_CURVE = '2BLnMW-2BLnMW--KyjA--KyjA-0-KyjA-CaR6-XZAG-KyjA-TN1E-KyjA-KyjA-KyjA-CaR6-TN1E-8OI4-fxSK-KyjA';
 
 const canvasPoints = new WeakMap<BezierPoint>();
 
-function clamp(value: number, min: number = 0, max: number = 1) {
-  return Math.min(Math.max(value, min), max);
-}
-
-// If max is negative, it will be treated as the minimum
-function signedClamp(value: number, min: number = 0, max: number = 1) {
-  if (max < 0) return clamp(value, max, min);
-  return clamp(value, min, max);
-}
-
-
-function snapToGrid(value: number, gridSpacing: number) {
-  return Math.round(value / gridSpacing) * gridSpacing;
-}
 
 
 export default function useGraph(
@@ -45,10 +36,12 @@ export default function useGraph(
   const { ref: showHandles, setValue: setShowHandles, ...showHandlesRest } = useRefState(true);
   const { ref: canSelectHandles, setValue: setCanSelectHandles } = useRefState(true);
   const { ref: canSelectPoints, setValue: setCanSelectPoints } = useRefState(true);
-  const { ref: yAxisScale, setValue: setYAxisScale } = useRefState(1);
-  const { ref: xAxisScale, setValue: setXAxisScale } = useRefState(1);
-  const { ref: yAxisLabel, setValue: setYAxisLabel } = useRefState('Y');
-  const { ref: xAxisLabel, setValue: setXAxisLabel } = useRefState('X');
+  const { ref: xFrom, setValue: setXFrom } = useRefState(0);
+  const { ref: xTo, setValue: setXTo } = useRefState(1);
+  const { ref: yFrom, setValue: setYFrom } = useRefState(0);
+  const { ref: yTo, setValue: setYTo } = useRefState(1);
+  // const { ref: xAxisScale, setValue: setXAxisScale } = useRefState(getOffsetAndScaleFromRange(xFrom.current, xTo.current).scale);
+  // const { ref: yAxisScale, setValue: setYAxisScale } = useRefState(getOffsetAndScaleFromRange(yFrom.current, yTo.current).scale);
   const { ref: gridLinesV, setValue: setGridLinesV } = useRefState(10);
   const { ref: gridLinesH, setValue: setGridLinesH } = useRefState(10);
 
@@ -64,12 +57,14 @@ export default function useGraph(
     () => canvasWidth.ref.current - (canvasPadding.ref.current * 2),
     [canvasWidth.ref.current, canvasPadding.ref.current],
   );
+  const scale = {
+    x: useMemoRefState(() => getOffsetAndScaleFromRange(xFrom.current, xTo.current).scale, [xFrom.current, xTo.current]),
+    y: useMemoRefState(() => getOffsetAndScaleFromRange(yFrom.current, yTo.current).scale, [yFrom.current, yTo.current]),
+  };
 
   const curveRef = useRef<EditableBezierCurve | null>(null);
 
   useEffect(() => {
-    console.log('Setting up curve');
-
     const curveConfig = initialCurve ? encodedChainToCurve(initialCurve) : encodedChainToCurve(DEFAULT_CURVE);
 
     curveRef.current = bezierCurve(curveConfig, {
@@ -80,23 +75,35 @@ export default function useGraph(
         // console.log('onPointRemove', index);
       },
       onPointChange: (curve, index, isNew) => {
-        // console.log('onPointChange', index, isNew);
-        recalculateCanvasPoint?.(curve, index);
+        // console.log('onPointChange', index, curveRef.current?.getScaledPoint(index).point);
+        recalculateCanvasPoint?.(curveRef.current!, index);
         // if (Math.random() < 0.05) setChain(curveToChain(curve));
         // location.search = `?curve=${curveToChain(curve).join(',')}`;
       },
+      inputs: { isScaled: false, isOffset: false },
     });
-
+    
     setEncodedChain(curveToEncodedChain(curveRef.current));
-    setXAxisScale(curveRef.current.scale[0]);
-    setYAxisScale(curveRef.current.scale[1]);
+    // setXAxisScale(curveRef.current.scale[0]);
+    // setYAxisScale(curveRef.current.scale[1]);
+    const xRange = getRangeFromOffsetAndScale(curveRef.current.offset[0], curveRef.current.scale[0]);
+    const yRange = getRangeFromOffsetAndScale(curveRef.current.offset[1], curveRef.current.scale[1]);
+
+    setXFrom(xRange.from);
+    setXTo(xRange.to);
+    setYFrom(yRange.from);
+    setYTo(yRange.to);
   }, []);
 
   useEffect(() => {
     if (!curveRef.current) return;
-    curveRef.current.setScale([xAxisScale.current, yAxisScale.current]);
+    const x = getOffsetAndScaleFromRange(xFrom.current, xTo.current);
+    const y = getOffsetAndScaleFromRange(yFrom.current, yTo.current);
+    curveRef.current.setOffset([x.offset, y.offset]);
+    curveRef.current.setScale([x.scale, y.scale]);
+
     setEncodedChain(curveToEncodedChain(curveRef.current));
-  }, [xAxisScale.current, yAxisScale.current]);
+  }, [xFrom.current, xTo.current, yFrom.current, yTo.current]);
 
   useEffect(() => {
     // Bootstrap history
@@ -104,7 +111,10 @@ export default function useGraph(
 
     const unlisten = encodedChainRest.listen((value) => {
       if (!curveRef.current || !encodedChain.current) return;
-      if (encodedChain.current !== chainHistory.current[chainHistory.current.length - 1]) {
+      const currentChain = encodedChain.current;
+      const history = chainHistory.current;
+      const lastInHistory = history[history.length - 1];
+      if (currentChain !== lastInHistory) {
         chainHistory.current.push(encodedChain.current);
         // Limit to 1000
         if (chainHistory.current.length > 1000) chainHistory.current.shift();
@@ -114,8 +124,14 @@ export default function useGraph(
       // but won't be the same as the current curve.
       if (encodedChain.current === curveToEncodedChain(curveRef.current)) return;
       curveRef.current.fromEncodedChain(encodedChain.current);
-      setXAxisScale(curveRef.current.scale[0]);
-      setYAxisScale(curveRef.current.scale[1]);
+      // setXAxisScale(curveRef.current.scale[0]);
+      // setYAxisScale(curveRef.current.scale[1]);
+      const xRange = getRangeFromOffsetAndScale(curveRef.current.offset[0], curveRef.current.scale[0]);
+      const yRange = getRangeFromOffsetAndScale(curveRef.current.offset[1], curveRef.current.scale[1]);
+      setXFrom(xRange.from);
+      setXTo(xRange.to);
+      setYFrom(yRange.from);
+      setYTo(yRange.to);
     });
 
     return () => {
@@ -123,40 +139,60 @@ export default function useGraph(
     };
   }, []);
 
-  function recalculateCanvasPoint(curve: BezierCurve, index: number) {
+  function recalculateCanvasPoint(curve: EditableBezierCurve, index: number) {
+    const point = curve.getScaledPoint(index);
     canvasPoints.set(curve.points[index], {
-      point: toCanvasCoordinates(curve.points[index].point, false),
+      point: toCanvasCoordinates(point.point),
       handle: [
-        toCanvasCoordinates(curve.points[index].handle[0], false),
-        toCanvasCoordinates(curve.points[index].handle[1], false),
+        toCanvasCoordinates(point.handle[0]),
+        toCanvasCoordinates(point.handle[1]),
       ],
     });
   };
 
-
-  function toCanvasCoordinates(vec: Vector2, scaled = true): Vector2 {
+  /**
+   * Converts from graph space to canvas space.
+   * @param vec A coordinate in the graph space.
+   * @returns 
+   */
+  function toCanvasCoordinates(vec: Vector2): Vector2 {
     const gw = gridWidth.ref.current;
     const cp = canvasPadding.ref.current;
-    // return [(vec[0] * gridWidth) + cp, (gridWidth - (vec[1] * gridWidth)) + cp];
-    const xRatio = vec[0] / (scaled ? xAxisScale.current : 1);
-    const yRatio = vec[1] / (scaled ? yAxisScale.current : 1);
+    
     return [
-      (xRatio * gw) + cp,
-      (gw - (yRatio * gw)) + cp,
+      remap(vec[0], [xFrom.current, xTo.current], [cp, cp + gw]),
+      remap(vec[1], [yFrom.current, yTo.current], [cp + gw, cp]),
     ];
   }
 
+  /**
+   * Converts from canvas space to graph space.
+   * @param vec A coordinate in the canvas space.
+   * @returns 
+   */
   function fromCanvasCoordinates(vec: Vector2): Vector2 {
     const gw = gridWidth.ref.current;
     const cp = canvasPadding.ref.current;
-    // return [vec[0] / canvasWidth, 1 - vec[1] / canvasWidth];
-    // return [(vec[0] - cp) / gridWidth, 1 - (vec[1] - cp) / gridWidth];
-    const xRatio = (vec[0] - cp) / gw;
-    const yRatio = 1 - (vec[1] - cp) / gw;
-
+    
     return [
-      xRatio * xAxisScale.current,
-      yRatio * yAxisScale.current,
+      remap(vec[0], [cp, cp + gw], [xFrom.current, xTo.current]),
+      remap(vec[1], [cp + gw, cp], [yFrom.current, yTo.current]),
+    ];
+  }
+
+  // TODO change this so it will snap to grid or axis, whichever is closer. Grid is often the same as axis, but not always.
+  function snapToGrid(
+    // Coordinates in graph space
+    from: Vector2,
+  ): Vector2 {
+    // Snap to grid with consideration of offset and scale
+    const x = remap(from[0], [xFrom.current, xTo.current], [0, 1]);
+    const y = remap(from[1], [yFrom.current, yTo.current], [0, 1]);
+    const snappedX = Math.round(x * gridLinesV.current) / gridLinesV.current;
+    const snappedY = Math.round(y * gridLinesH.current) / gridLinesH.current;
+    return [
+      remap(snappedX, [0, 1], [xFrom.current, xTo.current]),
+      remap(snappedY, [0, 1], [yFrom.current, yTo.current]),
     ];
   }
 
@@ -202,16 +238,18 @@ export default function useGraph(
       p.textSize(12);
       p.textAlign(p.CENTER, p.TOP);
       p.fill(0);
-      const xUnit = xAxisScale.current / gridLinesV.current;
+      const xUnit = scale.x.value / gridLinesV.current;
+      const xOffset = xFrom.current;
       for (let i = 1; i <= gridLinesV.current; i++) {
-        const value = (i * xUnit).toFixed(2);
+        const value = (xOffset + (i * xUnit)).toFixed(2);
         p.text(value, cp + i * vSpacing, cw - cp + 10);
       }
       // Y axis
       p.textAlign(p.RIGHT, p.CENTER);
-      const yUnit = yAxisScale.current / gridLinesH.current;
+      const yUnit = scale.y.value / gridLinesH.current;
+      const yOffset = yFrom.current;
       for (let i = 1; i <= gridLinesH.current; i++) {
-        const value = (i * yUnit).toFixed(2);
+        const value = (yOffset + (i * yUnit)).toFixed(2);
         p.text(value, cp - 10, cw - cp - i * gw / gridLinesH.current);
       }
     }
@@ -247,8 +285,14 @@ export default function useGraph(
 
       // Draw the axes
       p.strokeWeight(2);
-      p.line(cp, cp + gw, cw - cp, cp + gw); // x
-      p.line(cp, cp, cp, cp + gw); // y
+      // p.line(cp, cp + gw, cw - cp, cp + gw); // x
+      // p.line(cp, cp, cp, cp + gw); // y
+      const xStart = toCanvasCoordinates([xFrom.current, 0]);
+      const xEnd = toCanvasCoordinates([xTo.current, 0]);
+      if ((xStart[1] > cp) && (xStart[1] < cp + gw)) p.line(xStart[0], xStart[1], xEnd[0], xEnd[1]);
+      const yStart = toCanvasCoordinates([0, yFrom.current]);
+      const yEnd = toCanvasCoordinates([0, yTo.current]);
+      if ((yStart[0] > cp) && (yStart[0] < cp + gw)) p.line(yStart[0], yStart[1], yEnd[0], yEnd[1]);
     }
 
     function drawCurve() {
@@ -443,7 +487,8 @@ export default function useGraph(
       // Handle click
       const [x, y] = fromCanvasCoordinates([p.mouseX, p.mouseY]);
       const addedAt = curve.addPoint({
-        point: [signedClamp(x, 0, xAxisScale.current), signedClamp(y, 0, yAxisScale.current)] }, true);
+        point: [signedClamp(x, xFrom.current, xTo.current), signedClamp(y, yFrom.current, yTo.current)],
+      });
       if (addedAt !== null) {
         justAddedPoint = true;
         // Enable dragging of added point
@@ -452,7 +497,6 @@ export default function useGraph(
         lastDragPosition = p.createVector(p.mouseX, p.mouseY);
       }
       
-
       draw();
     };
 
@@ -469,22 +513,25 @@ export default function useGraph(
         const coords = fromCanvasCoordinates([p.mouseX, p.mouseY]);
 
         const moveTo = isSnapping
-          ? [
-            snapToGrid(coords[0], xAxisScale.current / gridLinesV.current),
-            snapToGrid(coords[1], yAxisScale.current / gridLinesH.current),
-          ]
+          ? snapToGrid(coords)
           : coords;
-
+        
         const moveToClamped: Vector2 = [
-          signedClamp(moveTo[0], 0, xAxisScale.current),
-          signedClamp(moveTo[1], 0, yAxisScale.current),
+          draggingHandle !== null
+            // If handle, simply clamp to the x range
+            ? signedClamp(moveTo[0], xFrom.current, xTo.current)
+            // If point, and first or last point, don't move x value
+            : draggingIndex === 0
+              ? xFrom.current
+              : draggingIndex === curve.points.length - 1
+                ? xTo.current
+                : signedClamp(moveTo[0], xFrom.current, xTo.current),
+          signedClamp(moveTo[1], yFrom.current, yTo.current),
         ];
 
-        if (draggingHandle !== null) curve.setHandlePosition(draggingIndex, draggingHandle, moveToClamped, true);
+        if (draggingHandle !== null) curve.setHandlePosition(draggingIndex, draggingHandle, moveToClamped);
         else {
-          // If first or last point, don't move x
-          if (draggingIndex === 0 || draggingIndex === curve.points.length - 1) moveToClamped[0] = draggingIndex === 0 ? 0 : xAxisScale.current;
-          curve.setPointPosition(draggingIndex, moveToClamped, true);
+          curve.setPointPosition(draggingIndex, moveToClamped);
         }
       }
 
@@ -599,10 +646,18 @@ export default function useGraph(
     toggleShowPoints: () => setShowPoints((showPoints) => !showPoints),
     toggleSelectHandles: () => setCanSelectHandles((canSelectHandles) => !canSelectHandles),
     toggleSelectPoints: () => setCanSelectPoints((canSelectPoints) => !canSelectPoints),
-    xAxisScale: xAxisScale.current,
-    yAxisScale: yAxisScale.current,
-    setXAxisScale: (value: number) => setXAxisScale(value),
-    setYAxisScale: (value: number) => setYAxisScale(value),
+    range: {
+      x: [xFrom.current, xTo.current],
+      y: [yFrom.current, yTo.current],
+      setX: (from: number, to: number) => {
+        setXFrom(from);
+        setXTo(to);
+      },
+      setY: (from: number, to: number) => {
+        setYFrom(from);
+        setYTo(to);
+      },
+    },
 
     gridLinesH: gridLinesH.current,
     gridLinesV: gridLinesV.current,
@@ -614,6 +669,6 @@ export default function useGraph(
       chainHistory.current.pop();
       const last = chainHistory.current[chainHistory.current.length - 1];
       if (last) setEncodedChain(last);
-    }
+    },
   };
 }
