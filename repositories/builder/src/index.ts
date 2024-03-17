@@ -27,6 +27,14 @@ export function getOffsetAndScaleFromRange(from: number, to: number) {
   };
 }
 
+export function getRangeFromOffsetAndScale(offset: number, scale: number) {
+  const from = offset * scale;
+  return {
+    from,
+    to: from + scale,
+  };
+}
+
 const exp = 1e7;
 function truncate(number: number) {
   return Math.round(number * exp) / exp;
@@ -293,6 +301,7 @@ export default function bezierCurve(
     position: Vector2,
     { isScaled = true, isOffset = true }: { isScaled?: boolean; isOffset?: boolean; } = {}
   ) {
+    if (!curve.points[index]) throw new Error(`Cannot set point position for index ${index}, point does not exist.`);
     position = isScaled ? [position[0] / curve.scale[0], position[1] / curve.scale[1]] : position.slice() as Vector2;
     position = isOffset ? [position[0] - curve.offset[0], position[1] - curve.offset[1]] : position.slice() as Vector2;
     const originalPosition = curve.points[index].point.slice() as Vector2;

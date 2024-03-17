@@ -78,6 +78,27 @@ describe('@query-curve/builder', () => {
     expect(shared.points[2].point).toEqual([0.5, 0.5]); // Should have been adjusted to not go past the previous point
   });
 
+  it('should allow moving the first and last points to coordinates beyond their current boundaries', () => {
+    const cloned = template.clone();
+
+    expect(cloned.points[0].point).toEqual([0, 0.5]);
+    expect(cloned.points[1].point).toEqual([1, 0.5]);
+  
+    // Attempt to move the first and last points to their new positions
+    cloned.setPointPosition(0, [-10, -10]); // Moving first point to -10, -10
+    cloned.setPointPosition(1, [10, 10]); // Moving last point to 10, 10
+  
+    // Verify that the first and last points have been moved as expected
+    expect(cloned.points[0].point).toEqual([-10, -10]); // Check first point moved correctly
+    expect(cloned.points[1].point).toEqual([10, 10]); // Check last point moved correctly
+
+    // Testing an actual regression encountered
+    cloned.setPointPosition(0, [-101.86666666666666, 0.5333333333333456]);
+    expect(cloned.points[0].point).toEqual([-101.86666666666666, 0.5333333333333456]);
+    cloned.setPointPosition(0, [-100, 0.5333333333333456]);
+    expect(cloned.points[0].point).toEqual([-100, 0.5333333333333456]);
+  });
+
   it('should update the scale without transforming the points', () => {
     const cloned = shared.clone();
     expect(cloned.scale).toEqual([1, 1]);
