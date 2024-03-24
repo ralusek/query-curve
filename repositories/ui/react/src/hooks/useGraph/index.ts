@@ -14,6 +14,7 @@ import useP5 from '@src/hooks/useP5';
 import remap from '@/src/utils/remap';
 import clamp from '@/src/utils/clamp';
 import signedClamp from '@/src/utils/signedClamp';
+import formatDataPoints from './helpers/formatDataPoints';
 
 // Constants
 const CLICK_RADIUS = 10;
@@ -21,8 +22,6 @@ const CLICK_RADIUS = 10;
 const DEFAULT_CURVE = '2BLnMW-2BLnMW--KyjA--KyjA-0-KyjA-CaR6-XZAG-KyjA-TN1E-KyjA-KyjA-KyjA-CaR6-TN1E-8OI4-fxSK-KyjA';
 
 const canvasPoints = new WeakMap<BezierPoint>();
-
-
 
 export default function useGraph(
   initialCurve: EncodedScaledBezierChain | null
@@ -44,6 +43,8 @@ export default function useGraph(
   // const { ref: yAxisScale, setValue: setYAxisScale } = useRefState(getOffsetAndScaleFromRange(yFrom.current, yTo.current).scale);
   const { ref: gridLinesV, setValue: setGridLinesV } = useRefState(10);
   const { ref: gridLinesH, setValue: setGridLinesH } = useRefState(10);
+
+  const { ref: dataPointInputs, setValue: setDataPointInputs } = useRefState([] as { points: string; show: boolean; }[]);
 
   const chainHistory = useRef<EncodedScaledBezierChain[]>([]);
 
@@ -196,6 +197,26 @@ export default function useGraph(
     ];
   }
 
+  // The reason we preserve index is so that we can preserve the position and keep
+  // colors consistent when showing/hiding data points
+  const dataPoints = useMemoRefState(() => {
+    const dataPoints = formatDataPoints(dataPointInputs.current);
+
+    // Convert to canvas coordinates
+    return dataPoints.map((dataPoints) => {
+      if (!dataPoints) return null;
+      const converted = dataPoints.points.map((point) => {
+        if (point[0] < xFrom.current || point[0] > xTo.current || point[1] < yFrom.current || point[1] > yTo.current) return null;
+        return toCanvasCoordinates(point);
+      }).filter(Boolean);
+
+      return {
+        ...dataPoints,
+        points: converted,
+      };
+    }).filter(Boolean) as { points: Vector2[]; index: number; }[];
+  }, [dataPointInputs.current, toCanvasCoordinates]);
+
   const { container, width, height } = useP5((p: p5, context: { unlisteners: (() => void)[] }) => {
     if (!curveRef.current) return p;
 
@@ -216,6 +237,7 @@ export default function useGraph(
     context.unlisteners.push(showHandlesRest.listen(() => draw()));
     context.unlisteners.push(showGridRest.listen(() => draw()));
     context.unlisteners.push(encodedChainRest.listen(() => setTimeout(() => draw(), 0)));
+    context.unlisteners.push(dataPoints.listen(() => draw()));
 
     function draw() {
       p.background(255); // Clear the background each time
@@ -223,6 +245,7 @@ export default function useGraph(
       
       drawGrid();
       drawNumberedScales();
+      drawDataPoints();
       drawCurve();
       drawIntersections();
     }
@@ -411,7 +434,21 @@ export default function useGraph(
       if (intersection !== null) {
         p.text(`(${mouse[0].toFixed(2)}, ${intersection!.toFixed(2)})`, mouseCanvas[0] + 10, intersectionCanvas![1] - 10);
       }
+    }
 
+    // Draw reference data points
+    function drawDataPoints() {
+      dataPoints.ref.current.forEach(({ index, points }) => {
+        if (!points) return;
+        if (index === 0) p.stroke(249, 65, 68, 200);
+        else if (index === 1) p.stroke(87, 117, 144, 200);
+        else if (index === 2) p.stroke(95, 15, 64, 200);
+        else p.stroke(0, 0, 0, 200); // should never happen
+        p.strokeWeight(8);
+        points.forEach((point) => {
+          p.point(...point);
+        });
+      });
     }
 
     p.keyPressed = () => {
@@ -650,12 +687,20 @@ export default function useGraph(
       x: [xFrom.current, xTo.current],
       y: [yFrom.current, yTo.current],
       setX: (from: number, to: number) => {
+        const savedScrollPosition = window.scrollY;
         setXFrom(from);
         setXTo(to);
+        // Extremely hacky way to scroll to back to where we were after changing the range
+        // in order to prevent the jump that happens on re-render
+        setTimeout(() => window.scrollTo(0, savedScrollPosition), 10);
       },
       setY: (from: number, to: number) => {
+        const savedScrollPosition = window.scrollY;
         setYFrom(from);
         setYTo(to);
+        // Extremely hacky way to scroll to back to where we were after changing the range
+        // in order to prevent the jump that happens on re-render
+        setTimeout(() => window.scrollTo(0, savedScrollPosition), 10);
       },
     },
 
@@ -663,6 +708,9 @@ export default function useGraph(
     gridLinesV: gridLinesV.current,
     setGridLinesH: (value: number) => setGridLinesH(value),
     setGridLinesV: (value: number) => setGridLinesV(value),
+
+    dataPointInputs: dataPointInputs.current,
+    setDataPointInputs: setDataPointInputs,
 
     undo: () => {
       if (chainHistory.current.length === 1) return;

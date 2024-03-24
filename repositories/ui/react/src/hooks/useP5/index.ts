@@ -7,7 +7,7 @@ import useDebounce from '@src/hooks/useDebounce';
 
 const disallowedKeys = new Set(['setup', 'remove']);
 
-
+const instanceResizeListeners = new WeakMap<p5, (width: number, height: number) => void>();
 
 export default function useP5<C extends any>(
   sketch: (p: p5, context: C) => {
@@ -29,17 +29,16 @@ export default function useP5<C extends any>(
   } = {},
   dependencies: any[] = [],
 ) {
-  containerRef = containerRef || (useRefState<HTMLDivElement | null>(null)).ref;
+  containerRef = (containerRef || (useRefState<HTMLDivElement | null>(null)).ref)!;
 
   const instances = useRef<Set<p5>>(new Set());
-  const instanceResizeListeners = useRef<WeakMap<p5, (width: number, height: number) => void>>(new WeakMap());
   const instanceContext = useRef<WeakMap<p5, C>>(new WeakMap());
 
   const debouncedOnResize = useRef(useDebounce(
     (width: number, height: number) => {
       instances.current.forEach((instance) => {
         instance.resizeCanvas(width, height);
-        const listener = instanceResizeListeners.current.get(instance);
+        const listener = instanceResizeListeners.get(instance);
         if (listener) listener(width, height);
       });
       if (onResize) onResize(width, height);
@@ -61,42 +60,50 @@ export default function useP5<C extends any>(
     let instance: p5;
 
     const p5Promise = (async () => {
-      const { default: p5 } = (await import('p5'))
+      const { default: p5 } = (await import('p5'));
 
-      new p5((p) => {
-        instance = p;
-        instances.current.add(p);
-        const context = {} as C;
-        instanceContext.current.set(p, context);
-        const proxy = new Proxy(p, {
-          get(target, prop, receiver) {
-            if (disallowedKeys.has(String(prop))) {
-              throw new Error(`Cannot get property '${String(prop)}' from p5 instance.`);
-            }
-            return Reflect.get(target, prop, receiver);
-          },
-          set(target, prop, value, receiver) {
-            if (disallowedKeys.has(String(prop))) {
-              throw new Error(`Cannot set property '${String(prop)}' on p5 instance.`);
-            }
-            return Reflect.set(target, prop, value, receiver);
-          },
-        });
+      // We create the p5 instance in a promise so that we can resolve it when the setup function
+      // has been called. This is necessary, because calling .remove() on a p5 instance before the
+      // setup function has been called will cause problems. Therefore, in the teardown function,
+      // we have to ensure that the setup function has been called before we remove the instance.
+      return new Promise<typeof p5>((resolve) => {
+        new p5((p: p5) => {
+          instance = p;
+          instances.current.add(p);
+          const context = {} as C;
+          instanceContext.current.set(p, context);
+          const proxy = new Proxy(p, {
+            get(target, prop, receiver) {
+              if (disallowedKeys.has(String(prop))) {
+                throw new Error(`Cannot get property '${String(prop)}' from p5 instance.`);
+              }
+              return Reflect.get(target, prop, receiver);
+            },
+            set(target, prop, value, receiver) {
+              if (disallowedKeys.has(String(prop))) {
+                throw new Error(`Cannot set property '${String(prop)}' on p5 instance.`);
+              }
+              return Reflect.set(target, prop, value, receiver);
+            },
+          });
 
-        const { setup, onResize } = sketch(proxy, context);
-        if (onResize) instanceResizeListeners.current.set(p, onResize);
+          const { setup, onResize } = sketch(proxy, context);
+          if (onResize) instanceResizeListeners.set(p, onResize);
 
-        p.setup = () => {
-          p.createCanvas(width.current!, height.current!);
+          p.setup = () => {
+            p.createCanvas(width.current!, height.current!);
 
-          setup(proxy);
-        };
-      }, containerRef.current!);
+            setup(proxy);
+
+            resolve(p5);
+          };
+        }, containerRef!.current!);
+      });
     })();
 
     return () => {
       (async () => {
-        await p5Promise;
+        await p5Promise; // Will resolve when the setup function has been called.
         instance?.remove();
         instances.current.delete(instance);
         cleanup?.(instance, instanceContext.current.get(instance)!);

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, CSSProperties, useMemo } from 'react';
+import { useEffect, useRef, useState, CSSProperties, useMemo, useCallback } from 'react';
 import { EncodedScaledBezierChain } from '@query-curve/builder/dist/@common/types';
 
 // Hooks
@@ -7,6 +7,7 @@ import useGetContainerDimensions from '@src/hooks/useGetContainerDimensions';
 
 // Components
 import InputDecimal from '@src/components/InputDecimal';
+import useRefState from '@/src/hooks/useRefState';
 
 
 type Style = {
@@ -148,6 +149,7 @@ const styles = {
     {
       min: 0,
       style: {
+        marginTop: '10px',
         flex: '0 0 auto',
         display: 'flex',
         flexDirection: 'column',
@@ -160,7 +162,6 @@ const styles = {
       min: 950,
       style: {
         flex: '1 1 33%',
-        marginTop: '10px',
       },
     },
   ],
@@ -208,9 +209,34 @@ const styles = {
     {
       min: 0,
       style: {
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
         width: '100%',
         flex: '0 0 auto',
         marginBottom: '10px',
+        padding: '0px 10px',
+      },
+    },
+    {
+      min: 950,
+      style: {
+        padding: '0px 0px',
+      },
+    },
+  ],
+  chainInputLabel: [
+    {
+      min: 0,
+      style: {
+        flex: '0 0 auto',
+        // minWidth: '100px',
+        marginRight: '12px',
+        fontWeight: 600,
+        borderRadius: '5px',
+        border: '1px solid #ccc',
+        padding: '7px 15px',
       },
     },
   ],
@@ -218,13 +244,74 @@ const styles = {
     {
       min: 0,
       style: {
+        flex: '1 1 auto',
         width: '100%',
-        padding: '7px 5px',
+        padding: '7px 12px',
         borderRadius: '5px',
         border: '1px solid #ccc',
         outline: 'none',
         transition: 'border-color 0.3s',
         textAlign: 'center',
+      },
+    },
+  ],
+  chainCopyButton: [
+    {
+      min: 0,
+      style: {
+        flex: '0 0 auto',
+        padding: '8px 15px',
+        minWidth: '100px',
+        borderRadius: '5px',
+        backgroundColor: '#f0c529',
+        color: '#203040',
+        fontWeight: 600,
+        cursor: 'pointer',
+        transition: 'background-color 0.3s',
+        marginLeft: '12px',
+      },
+    }
+  ],
+  dataPointInputsContainer: [
+    {
+      min: 0,
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        gridColumn: '1/-1', // Span all columns
+        gap: '10px',
+      },
+    },
+  ],
+  dataPointInputControls: [
+    {
+      min: 0,
+      style: {
+        display: 'flex',
+        flexDirection: 'row',
+        gap: '10px',
+        width: '100%',
+      },
+    },
+  ],
+  dataPointInputs: [
+    {
+      min: 0,
+      style: {},
+    },
+  ],
+  dataPointButton: [
+    {
+      min: 0,
+      style: {
+        padding: '5px 10px',
+        borderRadius: '5px',
+        backgroundColor: '#f0c529',
+        color: '#203040',
+        fontWeight: 600,
+        cursor: 'pointer',
+        transition: 'background-color 0.3s',
+        minWidth: '70px',
       },
     },
   ],
@@ -264,8 +351,12 @@ export default function QueryCurve({
     gridLinesV,
     setGridLinesH,
     setGridLinesV,
+    dataPointInputs,
+    setDataPointInputs,
     undo,
   } = (useGraph(initialChain || null)! || {});
+
+  const { ref: successfullyCopied, setValue: setSuccessfullyCopied } = useRefState(0);
 
   const el = {
     main: useGetContainerDimensions(),
@@ -278,6 +369,16 @@ export default function QueryCurve({
     encodedChain && onChangeEncodedChain?.(encodedChain);
   }, [encodedChain]);
 
+  const copyChain = useCallback(() => {
+    if (encodedChain) {
+      navigator.clipboard.writeText(encodedChain);
+      setSuccessfullyCopied(successfullyCopied.current + 1);
+      setTimeout(() => {
+        setSuccessfullyCopied(successfullyCopied.current - 1);
+      }, 2000);
+    }
+  }, [encodedChain]);
+
   const style = {
     main: useMemo(() => applyStyles(styles.main, el.main.width.current || 0), [el.main.width.current]),
 
@@ -285,6 +386,11 @@ export default function QueryCurve({
     graphInputs: useMemo(() => applyStyles(styles.graphInputs, el.graphInputsArea.width.current || 0), [el.graphInputsArea.width.current]),
     graphInputContainer: useMemo(() => applyStyles(styles.graphInputContainer, 0), []),
     graphInput: useMemo(() => applyStyles(styles.graphInput, 0), []),
+
+    dataPointInputsContainer: useMemo(() => applyStyles(styles.dataPointInputsContainer, 0), []),
+    dataPointInputControls: useMemo(() => applyStyles(styles.dataPointInputControls, 0), []),
+    dataPointInputs: useMemo(() => applyStyles(styles.dataPointInputs, 0), []),
+    dataPointButton: useMemo(() => applyStyles(styles.dataPointButton, 0), []),
 
     graphInputsAndControlsArea: useMemo(() => applyStyles(styles.graphInputsAndControlsArea, el.main.width.current || 0), [el.main.width.current]),
 
@@ -295,26 +401,60 @@ export default function QueryCurve({
     graphArea: useMemo(() => applyStyles(styles.graphArea, el.main.width.current || 0), [el.main.width.current]),
     graphElement: useMemo(() => applyStyles(styles.graphElement, el.main.width.current || 0), [el.main.width.current]),
 
-    chainContainer: useMemo(() => applyStyles(styles.chainContainer, 0), []),
+    chainContainer: useMemo(() => applyStyles(styles.chainContainer, el.main.width.current || 0), [el.main.width.current]),
+    chainInputLabel: useMemo(() => applyStyles(styles.chainInputLabel, 0), []),
     chainInput: useMemo(() => applyStyles(styles.chainInput, 0), []),
+    chainCopyButton: useMemo(() => applyStyles(styles.chainCopyButton, 0), []),
   };
+
+  const dataPointInputComponents = useMemo(() => {
+    const filtered = dataPointInputs.filter(({ points }) => Boolean(points));
+    filtered.push({ show: true, points: '' });
+    filtered.splice(3);
+    return filtered.map((dataPointInput, i) => {
+      return <div key={i} className={`DataPointInputContainer`} style={style.graphInputContainer}>
+        <label className={`DataPointInputLabel`}>Reference Data {i + 1}</label>
+        <div className={`DataPointInputControls`} style={style.dataPointInputControls}>
+          <input
+            className={`DataPointInput`}
+            style={style.graphInput}
+            value={dataPointInput.points}
+            onChange={(e) => {
+              const newInputs = [...dataPointInputs];
+              newInputs[i] = { ...dataPointInput, points: e.target.value };
+              setDataPointInputs(newInputs.filter(({ points }) => Boolean(points)));
+            }}
+          />
+          <button
+            className={`DataPointInputButton`}
+            style={style.dataPointButton}
+            onClick={() => {
+              const newInputs = [...dataPointInputs];
+              newInputs[i] = { ...dataPointInput, show: !dataPointInput.show };
+              setDataPointInputs(newInputs);
+            }}
+          >{ `${ dataPointInput.show ? 'Hide' : 'Show' }` }</button>
+        </div>
+      </div>;
+    });
+  }, [dataPointInputs]);
 
   const graphInputs = <div className={`GraphInputs`} style={style.graphInputs}>
     <div className={`GraphInputContainer`} style={style.graphInputContainer}>
       <label>X Axis From</label>
-      <InputDecimal className={`GraphInput`} style={style.graphInput} value={range.x[0]} onValue={(value) => value && range.setX(value, range.x[1])} />
+      <InputDecimal className={`GraphInput`} style={style.graphInput} value={range.x[0]} onValue={(value) => (value !== null) && range.setX(value, range.x[1])} />
     </div>
     <div className={`GraphInputContainer`} style={style.graphInputContainer}>
       <label>X Axis To</label>
-      <InputDecimal className={`GraphInput`} style={style.graphInput} value={range.x[1]} onValue={(value) => value && range.setX(range.x[0], value)} />
+      <InputDecimal className={`GraphInput`} style={style.graphInput} value={range.x[1]} onValue={(value) => (value !== null) && range.setX(range.x[0], value)} />
     </div>
     <div className={`GraphInputContainer`} style={style.graphInputContainer}>
       <label>Y Axis From</label>
-      <InputDecimal className={`GraphInput`} style={style.graphInput} value={range.y[0]} onValue={(value) => value && range.setY(value, range.y[1])} />
+      <InputDecimal className={`GraphInput`} style={style.graphInput} value={range.y[0]} onValue={(value) => (value !== null) && range.setY(value, range.y[1])} />
     </div>
     <div className={`GraphInputContainer`} style={style.graphInputContainer}>
       <label>Y Axis To</label>
-      <InputDecimal className={`GraphInput`} style={style.graphInput} value={range.y[1]} onValue={(value) => value && range.setY(range.y[0], value)} />
+      <InputDecimal className={`GraphInput`} style={style.graphInput} value={range.y[1]} onValue={(value) => (value !== null) && range.setY(range.y[0], value)} />
     </div>
     <div className={`GraphInputContainer`} style={style.graphInputContainer}>
       <label>Y Grid</label>
@@ -323,6 +463,9 @@ export default function QueryCurve({
     <div className={`GraphInputContainer`} style={style.graphInputContainer}>
       <label>X Grid</label>
       <input className={`GraphInput`} style={style.graphInput} type='number' min={1} max={50} value={gridLinesV} onChange={(e) => setGridLinesV(parseInt(e.target.value))} />
+    </div>
+    <div className={`GraphInputContainer data-point-inputs`} style={style.dataPointInputsContainer}>
+      { dataPointInputComponents }
     </div>
   </div>;
 
@@ -360,7 +503,15 @@ export default function QueryCurve({
       }
       <div className={`GraphArea`} style={style.graphArea}>
         <div className={`ChainContainer`} style={style.chainContainer}>
+          <div className={`ChainLabel`} style={style.chainInputLabel}>Your Curve:</div>
           <input className={`ChainInput`} style={style.chainInput} value={encodedChain || ''} onChange={(e) => setEncodedChain(e.target.value)} />
+          <button
+            className={`ChainCopyButton`}
+            style={style.chainCopyButton}
+            onClick={copyChain}
+          >
+            { successfullyCopied.current > 0 ? 'Copied!' : 'Copy' }
+          </button>
         </div>
         <div ref={container} style={style.graphElement}></div>
       </div>
