@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Distribution / Packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# IDE / Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Miscellaneous
+*.DS_Store
+*.bak
+*.swp

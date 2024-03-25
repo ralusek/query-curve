@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "query-curve"
+version = "0.1.0"
+description = "A query utility meant to query along a cubic bezier curve. Generate accompanying curve at https://querycurve.com"
+readme = "README.md"
+authors = [{name = "Tomas Savigliano", email = "ralusek@gmail.com"}]
+license = {file = "LICENSE"}
+urls = {homepage = "https://github.com/ralusek/query-curve/tree/main/repositories/query/python"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.6"
+
+[project.optional-dependencies]
+# Define any optional dependencies here if you have them
+
+[project.scripts]
+# Define any scripts or entry points
+
+[tool.setuptools]
+packages = ["find:"]
+package-dir = {"" = "src"}

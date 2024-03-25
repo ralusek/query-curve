@@ -1,6 +1,6 @@
 {
   "name": "@query-curve/ui-react",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/index.d.ts",

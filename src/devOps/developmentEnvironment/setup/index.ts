@@ -16,7 +16,7 @@ const REPO_NAME = asEnum({
   QUERY_CURVE_COMMON: 'common',
 
   QUERY_CURVE_BUILDER: 'builder',
-  QUERY_CURVE_QUERY: 'query',
+  QUERY_CURVE_QUERY_TS: 'query/typescript',
 });
 
 const REPO_NAME_LIST = Object.values(REPO_NAME);
@@ -25,7 +25,7 @@ const REPO_PATH = {
   [REPO_NAME.QUERY_CURVE_COMMON]: path.join(REPO_ROOT, REPO_NAME.QUERY_CURVE_COMMON),
 
   [REPO_NAME.QUERY_CURVE_BUILDER]: path.join(REPO_ROOT, REPO_NAME.QUERY_CURVE_BUILDER),
-  [REPO_NAME.QUERY_CURVE_QUERY]: path.join(REPO_ROOT, REPO_NAME.QUERY_CURVE_QUERY),
+  [REPO_NAME.QUERY_CURVE_QUERY_TS]: path.join(REPO_ROOT, REPO_NAME.QUERY_CURVE_QUERY_TS),
 };
 
 const SYMLINK_MAP = {
@@ -35,7 +35,7 @@ const SYMLINK_MAP = {
       TO: 'src/@common'
     },
   ],
-  [REPO_NAME.QUERY_CURVE_QUERY]: [
+  [REPO_NAME.QUERY_CURVE_QUERY_TS]: [
     {
       FROM: path.join(REPO_PATH[REPO_NAME.QUERY_CURVE_COMMON], 'src'),
       TO: 'src/@common'

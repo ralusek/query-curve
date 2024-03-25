@@ -190,7 +190,7 @@ function getTAtX(
  * This is an alternative method to getTAtX. It uses bisecting instead of Newton-Raphson.
  * It is slower but more reliable. It should be used as a fallback when Newton-Raphson fails to converge.
  * Reference implementation in chromium: https://chromium.googlesource.com/chromium/src/+/master/ui/gfx/geometry/cubic_bezier.cc
- * @param points
+ * @param segment
  * @param x 
  * @param tolerance 
  * @param maxIterations 

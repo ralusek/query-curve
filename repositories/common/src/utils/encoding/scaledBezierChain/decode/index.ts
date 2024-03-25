@@ -15,6 +15,11 @@ import { ENCODING_SCALE_FACTOR } from '../constants';
 // fxSK--fxSK-0-0-fxSK-fxSK-0-0-fxSK-fxSK
 // Note the second 2 examples have an extra leading -, indicating a negative.
 // For anything but the first, this results in a double -- preceding a value.
+/**
+ * Decode an encoded scaled Bezier chain
+ * @param chain {EncodedScaledBezierChain} The encoded chain
+ * @returns {ScaledBezierChain} The decoded chain
+ */
 export default function decode(chain: EncodedScaledBezierChain): ScaledBezierChain {
   const matches = chain
     // Add a leading - to the chain such that every value begins with - or --.

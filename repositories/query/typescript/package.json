@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ralusek/query-curve/tree/main/repositories/query"
+    "url": "https://github.com/ralusek/query-curve/tree/main/repositories/query/typescript"
   },
   "scripts": {
     "build": "node build.js",
