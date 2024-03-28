@@ -17,7 +17,7 @@ $ pip install query-curve
 ### Usage
 
 ```python
-from query_curve import query_encoded_curve, 
+from query_curve import query_encoded_curve
 ```
 
 #### Querying with a dynamically loaded curve
@@ -37,6 +37,7 @@ If the curve you're using will be used to facilitate multiple queries, this alte
 bypass the need to decode the curve on every query.
 
 ```python
+from query_curve import get_encoded_curve_query_function
 fixed_curve = 'fxSK-fxSK-0-0-0-0-KyjA-0-KyjA-fxSK-fxSK-fxSK'
 # Returns a function with a reference to the decoded curve
 query_my_curve = get_encoded_curve_query_function(fixed_curve) 
