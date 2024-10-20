@@ -21,6 +21,6 @@
     "dist"
   ],
   "dependencies": {
-    "@query-curve/query": "^0.1.1"
+    "@query-curve/query": "^1.0.1"
   }
 }
