@@ -35,7 +35,7 @@ export default function useP5<C extends any>(
   const instances = useRef<Set<p5>>(new Set());
   const instanceContext = useRef<WeakMap<p5, C>>(new WeakMap());
 
-  const debouncedOnResize = useRef(useDebounce(
+  const debouncedOnResize = useDebounce(
     (width: number, height: number) => {
       instances.current.forEach((instance) => {
         instance.resizeCanvas(width, height);
@@ -44,13 +44,13 @@ export default function useP5<C extends any>(
       });
       if (onResize) onResize(width, height);
     },
-    { wait: 250, maxWait: 500 }
-  ));
+    { wait: 250, maxWait: 500 },
+  );
 
   const { width, height } = useGetContainerDimensions(
     containerRef,
     {
-      onResize: debouncedOnResize.current,
+      onResize: debouncedOnResize,
     },
   );
 

@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import useClosureEscape from '../useClosureEscape';
 
 export default function useDebounce<
   A extends any[],
@@ -14,12 +15,9 @@ export default function useDebounce<
   },
 ) {
   const timeout = useRef<NodeJS.Timeout | null>(null);
-  const firstCall = useRef<number>();
-  const fnRef = useRef(fn);
-  fnRef.current = fn;
+  const firstCall = useRef<number | undefined>(undefined);
 
-  return (...args: A) => {
-    
+  return useClosureEscape((...args: A) => {
     if (timeout.current) {
       clearTimeout(timeout.current);
       timeout.current = null;
@@ -34,7 +32,7 @@ export default function useDebounce<
 
     timeout.current = setTimeout(() => {
       firstCall.current = undefined;
-      fnRef.current(...args);
+      fn(...args);
     }, invokeIn);
-  };
+  });
 }

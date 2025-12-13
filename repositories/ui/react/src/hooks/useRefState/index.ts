@@ -1,5 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 
+const refProxies = new WeakMap<React.RefObject<any>, React.RefObject<any>>();
+
+
 /**
  * Benefits of state and ref. Has the up to date and closure-escaping properties of using a ref.
  * Has the reactivity of a state/triggers the re-render of the component when the value changes.
@@ -14,13 +17,22 @@ export default function useRefState<
   defaultValue: T,
   {
     useState = true,
-  }: { useState?: boolean } = {},
+    useProxy = true,
+  }: {
+    /**
+     * Whether or not to utilize React state. Defaults to true. We always also use ref, but utilization of state is what forces a re-render. 
+     * The reason we use a ref is for its immediacy, whereas state is deferred until the next render.
+     */
+    useState?: boolean;
+    /**
+     * Whether or not to use a proxy for the ref. Defaults to true. Only disable for slight performance gains
+     * or if you really know what you're doing. It prevents accidentally setting properties on the ref without
+     * using the setValue function, which basically defeats the purporse of this hook.
+     */
+    useProxy?: boolean;
+  } = {},
 ) {
-  let setState: React.Dispatch<React.SetStateAction<T>> | undefined;
-  if (useState) {
-    const [state, setStateDirect] = React.useState(defaultValue);
-    setState = setStateDirect;
-  }
+  const [, setState] = React.useState(defaultValue);
   
   const ref = useRef(defaultValue);
 
@@ -34,22 +46,7 @@ export default function useRefState<
     return ref.current;
   }
 
-  const refProxy = useRef(
-    new Proxy(ref, {
-      get(target, prop, receiver) {
-        const okay = new Set(['current', 'hasOwnProperty']);
-        if (typeof prop === 'string' && okay.has(prop)) return Reflect.get(ref, prop, receiver);
-        throw new Error(`Cannot get a property on the ref other than 'current.' Attempted to get '${String(prop)}'`);
-      },
-      set(target, prop, value: T, receiver) {
-        if (prop === 'current') {
-          setValue(value); 
-          return true;
-        }
-        throw new Error(`Cannot set a property on the ref other than 'current'`);
-      },
-    })
-  );
+  const refProxy = getRefProxy(ref, { setValue, useProxy });
 
   function listen(listener: (value: T) => void) {
     listeners.current.add(listener);
@@ -68,7 +65,7 @@ export default function useRefState<
   return {
     setValue,
     get value() { return ref.current; },
-    ref: refProxy.current,
+    ref: refProxy,
     listen,
     unlisten: (listener: (value: T) => void) => listeners.current.delete(listener),
     unlistenAll: () => listeners.current.clear(),
@@ -88,4 +85,42 @@ export function useMemoRefState<
   }, dependencies);
 
   return memoized;
+}
+
+const OKAY_REF_PROPERTIES = new Set([
+  'current',
+  'hasOwnProperty',
+]);
+/**
+ * Generates a proxy for the ref that allows for the setting and getting of properties on the ref,
+ * while still updating state for proper triggering of re-renders.
+ * Adds mild protection against misusing the ref.
+ */
+function getRefProxy<T>(
+  ref: React.RefObject<T>,
+  {
+    setValue,
+    useProxy = true,
+  }: {
+    setValue: (value: T | React.SetStateAction<T>) => T;
+    useProxy?: boolean;
+  },
+): React.RefObject<T> {
+  if (!useProxy) return ref;
+  if (refProxies.has(ref)) return refProxies.get(ref)!;
+  const newProxy = new Proxy(ref, {
+    get(target, prop, receiver) {
+      if (typeof prop === 'string' && OKAY_REF_PROPERTIES.has(prop)) return Reflect.get(ref, prop, receiver);
+      throw new Error(`Cannot get a property on the ref other than 'current.' Attempted to get '${String(prop)}'`);
+    },
+    set(target, prop, value: T, receiver) {
+      if (prop === 'current') {
+        setValue(value); 
+        return true;
+      }
+      throw new Error(`Cannot set a property on the ref other than 'current'`);
+    },
+  });
+  refProxies.set(ref, newProxy);
+  return newProxy;
 }
