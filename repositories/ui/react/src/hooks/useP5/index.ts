@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import p5 from 'p5';
+import type p5 from 'p5';
 
 import useGetContainerDimensions from '@src/hooks/useGetContainerDimensions';
 import useRefState from '@src/hooks/useRefState';
@@ -29,7 +29,8 @@ export default function useP5<C extends any>(
   } = {},
   dependencies: any[] = [],
 ) {
-  containerRef = (containerRef || (useRefState<HTMLDivElement | null>(null)).ref)!;
+  const internalContainerRef = useRefState<HTMLDivElement | null>(null);
+  containerRef = containerRef || internalContainerRef.ref;
 
   const instances = useRef<Set<p5>>(new Set());
   const instanceContext = useRef<WeakMap<p5, C>>(new WeakMap());

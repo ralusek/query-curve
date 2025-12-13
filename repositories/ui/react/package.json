@@ -16,23 +16,21 @@
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
-    "p5": "^1.9.0",
-    "react": "^17.0.0 || ^18.0.0",
-    "react-dom": "^17.0.0 || ^18.0.0"
+    "react": ">=18.0.0 <20.0.0",
+    "react-dom": ">=18.0.0 <20.0.0"
   },
   "devDependencies": {
     "@types/p5": "^1.7.6",
-    "@types/react": "^18.2.64",
-    "@types/react-dom": "^18.2.21",
-    "esbuild": "^0.18.20",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "esbuild": "^0.25.0",
     "esbuild-plugin-d-ts-path-alias": "^4.2.0",
     "esbuild-plugin-d.ts": "^1.2.3",
-    "p5": "^1.9.1",
-    "react": "^18.2.0",
-    "typescript": "^5.4.2"
+    "typescript": "^5.7.3"
   },
   "dependencies": {
     "@query-curve/builder": "^1.1.2",
-    "@query-curve/query": "^1.0.0"
+    "@query-curve/query": "^1.0.1",
+    "p5": "^1.11.3"
   }
 }
